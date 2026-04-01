@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SG Taxi Meter</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #0f0f1a;
+    --panel2: #13131f;
+    --border: #1e1e35;
+    --green: #00ff88;
+    --green-dim: #00994d;
+    --amber: #ffaa00;
+    --amber-dim: #886600;
+    --red: #ff3355;
+    --red-dim: #881122;
+    --blue: #00aaff;
+    --blue-dim: #005588;
+    --text: #e0e0f0;
+    --text-dim: #555570;
+    --glow-green: 0 0 10px #00ff8888, 0 0 30px #00ff8833;
+    --glow-amber: 0 0 10px #ffaa0088, 0 0 30px #ffaa0033;
+    --glow-red:   0 0 10px #ff335588, 0 0 30px #ff335533;
+    --glow-blue:  0 0 10px #00aaff88, 0 0 30px #00aaff33;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, #00ff8808 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, #ffaa0008 0%, transparent 50%);
+  }
+
+  .container { width: 420px; padding: 16px; }
+
+  .header { text-align:center; margin-bottom:16px; }
+  .header-badge {
+    display: inline-block;
+    background: linear-gradient(135deg,#ffaa00,#ff6600);
+    color: #000; font-family:'Bebas Neue',sans-serif;
+    font-size:11px; letter-spacing:3px;
+    padding:3px 12px; border-radius:2px; margin-bottom:6px;
+  }
+  .header h1 {
+    font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900;
+    letter-spacing:4px; color:var(--text); text-shadow:0 0 20px #ffffff22;
+  }
+
+  .fare-card {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:20px; margin-bottom:12px;
+    position:relative; overflow:hidden;
+  }
+  .fare-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg,transparent,var(--green),transparent); opacity:.5;
+  }
+  .fare-label {
+    font-size:10px; letter-spacing:3px; color:var(--text-dim);
+    text-transform:uppercase; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .status-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--text-dim); transition:all .3s;
+  }
+  .status-dot.active     { background:var(--green); box-shadow:var(--glow-green); animation:pulse 1s infinite; }
+  .status-dot.idle       { background:var(--amber); box-shadow:var(--glow-amber); }
+  .status-dot.stationary { background:var(--red);   box-shadow:var(--glow-red);   animation:pulse .5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .fare-display {
+    font-family:'Orbitron',sans-serif; font-size:62px; font-weight:900;
+    color:var(--green); text-shadow:var(--glow-green);
+    letter-spacing:2px; line-height:1; text-align:center;
+    transition:color .3s,text-shadow .3s;
+  }
+  .fare-display.charging { color:var(--amber); text-shadow:var(--glow-amber); }
+  .fare-currency { font-size:26px; vertical-align:super; margin-right:2px; }
+
+  .stats-row {
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:8px; margin-bottom:12px;
+  }
+  .stat-box {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:10px 8px; text-align:center;
+  }
+  .stat-val {
+    font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700;
+    color:var(--blue); text-shadow:var(--glow-blue);
+  }
+  .stat-lbl { font-size:8px; letter-spacing:2px; color:var(--text-dim); margin-top:3px; text-transform:uppercase; }
+
+  .gps-bar {
+    display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:9px 14px; margin-bottom:12px;
+  }
+  .gps-dot { width:8px; height:8px; border-radius:50%; background:var(--text-dim); flex-shrink:0; transition:all .3s; }
+  .gps-dot.on  { background:var(--green); box-shadow:var(--glow-green); animation:pulse 2s infinite; }
+  .gps-dot.sim { background:var(--amber); box-shadow:var(--glow-amber); }
+  .gps-dot.off { background:var(--red);   box-shadow:var(--glow-red); }
+  .gps-info { flex:1; }
+  .gps-status { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; }
+  .gps-coords { font-size:9px; color:var(--text-dim); margin-top:2px; font-size:8px; letter-spacing:1px; }
+  .gps-enable-btn {
+    background:transparent; border:1px solid var(--blue-dim); color:var(--blue);
+    font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1.5px;
+    padding:4px 10px; border-radius:4px; cursor:pointer; text-transform:uppercase;
+    transition:all .2s; white-space:nowrap;
+  }
+  .gps-enable-btn:hover { background:#00aaff11; border-color:var(--blue); }
+
+  .stationary-bar {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:8px; padding:10px 14px; margin-bottom:12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .stat-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; flex-shrink:0; }
+  .stat-progress { height:3px; background:var(--border); border-radius:2px; flex:1; overflow:hidden; }
+  .stat-progress-fill { height:100%; width:0%; border-radius:2px; background:var(--text-dim); transition:width 1s linear,background .3s; }
+  .stat-progress-fill.warn { background:var(--amber); }
+  .stat-progress-fill.crit { background:var(--red); }
+  .stat-timer {
+    font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700;
+    color:var(--text-dim); min-width:50px; text-align:right; transition:color .3s,text-shadow .3s;
+  }
+  .stat-timer.warn { color:var(--amber); text-shadow:var(--glow-amber); }
+  .stat-timer.crit { color:var(--red);   text-shadow:var(--glow-red); }
+
+  .section-title { font-size:9px; letter-spacing:3px; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px; padding-left:2px; }
+  .charges-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .charge-btn {
+    background:var(--panel2); border:1px solid var(--border);
+    border-radius:10px; padding:12px 10px; cursor:pointer;
+    transition:all .2s; text-align:left; position:relative; overflow:hidden;
+  }
+  .charge-btn:hover:not(:disabled) { border-color:#2e2e55; transform:translateY(-1px); }
+  .charge-btn:disabled { opacity:.35; cursor:not-allowed; }
+  .charge-btn.active-charge { border-color:var(--amber); background:#1a1408; box-shadow:inset 0 0 20px #ffaa0011; }
+  .cb-icon { font-size:18px; margin-bottom:4px; display:block; }
+  .cb-name { font-size:10px; letter-spacing:1.5px; color:var(--text); text-transform:uppercase; display:block; }
+  .cb-amt  { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700; color:var(--amber); margin-top:4px; display:block; }
+  .cb-count {
+    position:absolute; top:8px; right:10px;
+    font-family:'Orbitron',sans-serif; font-size:16px; font-weight:900;
+    color:var(--amber); text-shadow:var(--glow-amber);
+    opacity:0; transition:opacity .3s;
+  }
+  .charge-btn.active-charge .cb-count { opacity:1; }
+
+  hr.div { border:none; border-top:1px solid var(--border); margin:14px 0; }
+
+  .controls-main { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  .controls-aux  { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  .btn {
+    border:none; border-radius:10px; cursor:pointer;
+    font-family:'Orbitron',sans-serif; font-weight:700;
+    letter-spacing:2px; text-transform:uppercase;
+    transition:all .2s; position:relative; overflow:hidden;
+  }
+  .btn::after {
+    content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+    background:linear-gradient(90deg,transparent,#ffffff11,transparent); transition:left .5s;
+  }
+  .btn:hover:not(:disabled)::after { left:100%; }
+  .btn:active:not(:disabled) { transform:scale(.97); }
+  .btn:disabled { opacity:.35; cursor:not-allowed; }
+
+  .btn-start {
+    background:linear-gradient(135deg,#004d2a,#006635); border:1px solid var(--green-dim);
+    color:var(--green); font-size:12px; padding:18px; box-shadow:0 0 20px #00ff8822;
+  }
+  .btn-start:hover:not(:disabled) { background:linear-gradient(135deg,#006635,#008844); box-shadow:0 0 30px #00ff8844; }
+
+  .btn-finish {
+    background:linear-gradient(135deg,#4d0010,#661522); border:1px solid var(--red-dim);
+    color:var(--red); font-size:12px; padding:18px; box-shadow:0 0 20px #ff335522;
+  }
+  .btn-finish:hover:not(:disabled) { background:linear-gradient(135deg,#661522,#882030); box-shadow:0 0 30px #ff335544; }
+
+  .btn-maps {
+    background:linear-gradient(135deg,#003a55,#004d70); border:1px solid var(--blue-dim);
+    color:var(--blue); font-size:10px; padding:12px 8px; box-shadow:0 0 15px #00aaff11;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn-maps:hover:not(:disabled) { background:linear-gradient(135deg,#004d70,#006699); box-shadow:0 0 25px #00aaff33; }
+
+  .btn-reset {
+    background:var(--panel2); border:1px solid var(--border);
+    color:var(--text-dim); font-size:10px; padding:12px 8px;
+  }
+  .btn-reset:hover:not(:disabled) { border-color:#2e2e55; color:var(--text); }
+
+  .modal-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:#000000cc; backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s;
+  }
+  .modal-overlay.visible { opacity:1; pointer-events:all; }
+  .receipt {
+    background:var(--panel); border:1px solid var(--green-dim); border-radius:16px;
+    padding:28px; width:340px; box-shadow:0 0 60px #00ff8822;
+    transform:translateY(20px); transition:transform .3s;
+  }
+  .modal-overlay.visible .receipt { transform:translateY(0); }
+  .receipt-title { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:4px; color:var(--green); text-shadow:var(--glow-green); text-align:center; margin-bottom:4px; }
+  .receipt-sub   { text-align:center; font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:20px; }
+  .receipt-line  { display:flex; justify-content:space-between; font-size:11px; padding:6px 0; border-bottom:1px solid var(--border); color:var(--text-dim); }
+  .receipt-line.total { border-bottom:none; margin-top:8px; font-size:14px; color:var(--text); }
+  .receipt-line .val { color:var(--text); font-family:'Orbitron',sans-serif; font-size:12px; }
+  .receipt-line.total .val { color:var(--green); text-shadow:var(--glow-green); font-size:20px; }
+  .receipt-close {
+    display:block; width:100%; margin-top:20px;
+    background:linear-gradient(135deg,#004d2a,#006635); border:1px solid var(--green-dim);
+    color:var(--green); font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px;
+    padding:12px; border-radius:8px; cursor:pointer; text-transform:uppercase; transition:all .2s;
+  }
+  .receipt-close:hover { background:linear-gradient(135deg,#006635,#008844); }
+
+  @keyframes fareFlash { 0%{transform:scale(1)} 30%{transform:scale(1.05)} 100%{transform:scale(1)} }
+  .fare-display.tick { animation:fareFlash .3s ease-out; }
+
+  body::after {
+    content:''; position:fixed; top:0; left:0; right:0; bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,#00000008 2px,#00000008 4px);
+    pointer-events:none; z-index:9999;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-badge">🇸🇬 Singapore</div>
+    <h1>TAXIMETER</h1>
+  </div>
+  <div class="fare-card">
+    <div class="fare-label">
+      <span>METERED FARE</span>
+      <span id="statusDot" class="status-dot"></span>
+    </div>
+    <div class="fare-display" id="fareDisplay">
+      <span class="fare-currency">$</span><span id="fareAmount">0.00</span>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-val" id="distVal">0.00</div>
+      <div class="stat-lbl">KM</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="timeVal">00:00</div>
+      <div class="stat-lbl">ELAPSED</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="speedVal">0</div>
+      <div class="stat-lbl">KM/H</div>
+    </div>
+  </div>
+  <div class="gps-bar">
+    <div class="gps-dot" id="gpsDot"></div>
+    <div class="gps-info">
+      <div class="gps-status" id="gpsStatus">GPS: Requesting…</div>
+      <div class="gps-coords" id="gpsCoords">—</div>
+    </div>
+    <button class="gps-enable-btn" id="gpsBtn" onclick="requestGPS()">Enable</button>
+  </div>
+  <div class="stationary-bar">
+    <div class="stat-label">🚦 Idle</div>
+    <div class="stat-progress">
+      <div class="stat-progress-fill" id="statFill"></div>
+    </div>
+    <div class="stat-timer" id="statTimer">--:--</div>
+  </div>
+  <div class="section-title">Surcharges & Tolls</div>
+  <div class="charges-grid">
+    <button class="charge-btn" id="btnERP"  onclick="addCharge('erp')"      disabled>
+      <span class="cb-icon">🛣️</span><span class="cb-name">ERP</span><span class="cb-amt">+$0.50</span>
+      <span class="cb-count" id="erpCount">×0</span>
+    </button>
+    <button class="charge-btn" id="btnToll" onclick="addCharge('toll')"     disabled>
+      <span class="cb-icon">🏗️</span><span class="cb-name">Other Toll</span><span class="cb-amt">+$1.00</span>
+      <span class="cb-count" id="tollCount">×0</span>
+    </button>
+    <button class="charge-btn" id="btnPeak" onclick="addCharge('peak')"     disabled>
+      <span class="cb-icon">⏰</span><span class="cb-name">Peak Hour</span><span class="cb-amt">+$3.00</span>
+      <span class="cb-count" id="peakCount">×0</span>
+    </button>
+    <button class="charge-btn" id="btnMN"   onclick="addCharge('midnight')" disabled>
+      <span class="cb-icon">🌙</span><span class="cb-name">Midnight</span><span class="cb-amt">+$5.00</span>
+      <span class="cb-count" id="midnightCount">×0</span>
+    </button>
+  </div>
+  <hr class="div">
+  <div class="controls-main">
+    <button class="btn btn-start"  id="btnStart"  onclick="startHire()">▶ START HIRE</button>
+    <button class="btn btn-finish" id="btnFinish" onclick="finishHire()" disabled>■ FINISH</button>
+  </div>
+  <div class="controls-aux">
+    <button class="btn btn-maps" onclick="openGoogleMaps()">
+      <span>🗺️</span><span>GOOGLE MAPS</span>
+    </button>
+    <button class="btn btn-reset" id="btnReset" onclick="resetMeter()" disabled>↺ RESET</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="receipt">
+    <div class="receipt-title">RECEIPT</div>
+    <div class="receipt-sub">THANK YOU FOR RIDING</div>
+    <div class="receipt-line"><span>Base Fare</span>          <span class="val" id="rcBase">$0.00</span></div>
+    <div class="receipt-line"><span>Distance Travelled</span> <span class="val" id="rcDist">0.00 km</span></div>
+    <div class="receipt-line"><span>Distance Charges</span>   <span class="val" id="rcDistCharge">$0.00</span></div>
+    <div class="receipt-line"><span>Stationary Charges</span> <span class="val" id="rcStat">$0.00</span></div>
+    <div class="receipt-line"><span>ERP</span>                <span class="val" id="rcERP">$0.00</span></div>
+    <div class="receipt-line"><span>Other Tolls</span>        <span class="val" id="rcToll">$0.00</span></div>
+    <div class="receipt-line"><span>Surcharges</span>         <span class="val" id="rcSurcharge">$0.00</span></div>
+    <div class="receipt-line"><span>Duration</span>           <span class="val" id="rcTime">0:00</span></div>
+    <div class="receipt-line total"><span>TOTAL</span>        <span class="val" id="rcTotal">$0.00</span></div>
+    <button class="receipt-close" onclick="closeReceipt()">NEW TRIP</button>
+  </div>
+</div>
+
+<script>
+const BASE_FARE      = 5.00;
+const PER_300M       = 0.33;
+const TICK_METRES    = 300;
+const STAT_SECS      = 180;
+const MOVE_THRESHOLD = 2;
+
+const S = {
+  running: false,
+  fare: 0, distanceFare: 0, stationaryFare: 0,
+  surcharges: { erp:0, toll:0, peak:0, midnight:0 },
+  distanceMetres: 0, distanceBuffer: 0,
+  elapsedSecs: 0,
+  stationarySecs: 0,
+  isMoving: false, speed: 0,
+  gpsOK: false,
+  gpsWatch: null,
+  lastPos: null,
+  currentLat: null, currentLng: null,
+};
+
+let mainInterval = null;
+
+function requestGPS() {
+  if (!navigator.geolocation) {
+    setGPSUI('off', 'GPS: Not supported', '');
+    return;
+  }
+  el('gpsStatus').textContent = 'GPS: Acquiring…';
+  navigator.geolocation.getCurrentPosition(onGPSSuccess, onGPSError, {
+    enableHighAccuracy: true, timeout: 10000, maximumAge: 0
+  });
+}
+
+function startGPSWatch() {
+  if (S.gpsWatch) return;
+  S.gpsWatch = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, {
+    enableHighAccuracy: true, maximumAge: 1500, timeout: 10000
+  });
+}
+
+function onGPSSuccess(pos) {
+  S.gpsOK = true;
+  S.currentLat = pos.coords.latitude;
+  S.currentLng = pos.coords.longitude;
+  S.lastPos = { lat: S.currentLat, lng: S.currentLng, t: Date.now() };
+  setGPSUI('on', 'GPS: Active', fmtCoords(S.currentLat, S.currentLng));
+  el('gpsBtn').style.display = 'none';
+  startGPSWatch();
+}
+
+function onGPSError(err) {
+  const msgs = { 1:'Permission denied', 2:'Position unavailable', 3:'Timeout' };
+  setGPSUI('off', 'GPS: ' + (msgs[err.code] || 'Error'), 'Needs HTTPS to work');
+}
+
+function onGPSUpdate(pos) {
+  const now   = Date.now();
+  const lat   = pos.coords.latitude;
+  const lng   = pos.coords.longitude;
+  const acc   = pos.coords.accuracy;
+
+  if (acc > 50 && !S.running) return;
+
+  S.currentLat = lat;
+  S.currentLng = lng;
+
+  let speedKmh = 0;
+  if (pos.coords.speed != null && pos.coords.speed >= 0) {
+    speedKmh = pos.coords.speed * 3.6;
+  } else if (S.lastPos) {
+    const d = haversine(S.lastPos, { lat, lng });
+    const dt = (now - S.lastPos.t) / 1000;
+    speedKmh = dt > 0 ? (d / dt) * 3.6 : 0;
+  }
+
+  S.speed    = Math.round(speedKmh);
+  S.isMoving = speedKmh > MOVE_THRESHOLD;
+
+  if (S.running && S.lastPos) {
+    const d = haversine(S.lastPos, { lat, lng });
+    if (d < 200) addDistance(d);
+  }
+
+  S.lastPos = { lat, lng, t: now };
+  setGPSUI('on', `GPS: ${S.isMoving ? '▶ Moving' : '◼ Stopped'} (${S.speed} km/h)`,
+           fmtCoords(lat, lng));
+}
+
+function openGoogleMaps() {
+  let url;
+  if (S.currentLat != null && S.currentLng != null) {
+    // FIXED: Real Google Maps Navigation URL structure
+    url = `https://www.google.com/maps/dir/?api=1&origin=${S.currentLat},${S.currentLng}&travelmode=driving`;
+  } else {
+    url = 'https://www.google.com/maps';
+  }
+  window.open(url, '_blank');
+}
+
+function startHire() {
+  if (S.running) return;
+  S.running = true;
+  S.fare = BASE_FARE;
+  resetStats();
+  updateFareDisplay();
+  updateSurchargeUI();
+  el('statusDot').className = 'status-dot active';
+  el('btnStart').disabled = true;
+  el('btnFinish').disabled = false;
+  el('btnReset').disabled = true;
+  enableSurcharges(true);
+  if (S.gpsOK) startGPSWatch();
+  mainInterval = setInterval(tick, 1000);
+}
+
+function resetStats() {
+  S.distanceFare = 0; S.stationaryFare = 0; S.distanceMetres = 0; S.distanceBuffer = 0;
+  S.elapsedSecs = 0; S.stationarySecs = 0; S.surcharges = { erp:0, toll:0, peak:0, midnight:0 };
+}
+
+function tick() {
+  if (!S.running) return;
+  S.elapsedSecs++;
+  if (S.gpsOK && !S.isMoving) {
+    S.stationarySecs++;
+    if (S.stationarySecs > 0 && S.stationarySecs % STAT_SECS === 0) {
+      S.stationaryFare += PER_300M;
+      S.fare += PER_300M;
+      flashFare();
+    }
+  } else {
+    S.stationarySecs = 0;
+  }
+  updateStationaryUI();
+  updateStatsUI();
+  updateFareDisplay();
+}
+
+function addDistance(metres) {
+  S.distanceMetres += metres;
+  S.distanceBuffer += metres;
+  while (S.distanceBuffer >= TICK_METRES) {
+    S.distanceBuffer -= TICK_METRES;
+    S.distanceFare += PER_300M;
+    S.fare += PER_300M;
+    flashFare();
+  }
+}
+
+function finishHire() {
+  if (!S.running) return;
+  S.running = false;
+  clearInterval(mainInterval);
+  el('statusDot').className = 'status-dot idle';
+  enableSurcharges(false);
+  showReceipt();
+}
+
+function showReceipt() {
+  el('rcBase').textContent = `$${BASE_FARE.toFixed(2)}`;
+  el('rcDist').textContent = `${(S.distanceMetres/1000).toFixed(2)} km`;
+  el('rcDistCharge').textContent = `$${S.distanceFare.toFixed(2)}`;
+  el('rcStat').textContent = `$${S.stationaryFare.toFixed(2)}`;
+  el('rcERP').textContent = `$${(S.surcharges.erp * 0.5).toFixed(2)}`;
+  el('rcToll').textContent = `$${(S.surcharges.toll * 1.0).toFixed(2)}`;
+  el('rcSurcharge').textContent = `$${((S.surcharges.peak*3)+(S.surcharges.midnight*5)).toFixed(2)}`;
+  el('rcTime').textContent = formatTime(S.elapsedSecs);
+  el('rcTotal').textContent = `$${S.fare.toFixed(2)}`;
+  el('modalOverlay').classList.add('visible');
+}
+
+function closeReceipt() {
+  el('modalOverlay').classList.remove('visible');
+  resetMeter();
+}
+
+function resetMeter() {
+  S.running = false; clearInterval(mainInterval);
+  el('fareAmount').textContent = '0.00';
+  el('statusDot').className = 'status-dot';
+  el('distVal').textContent = '0.00';
+  el('timeVal').textContent = '00:00';
+  el('speedVal').textContent = '0';
+  updateSurchargeUI();
+  el('btnStart').disabled = false;
+  el('btnFinish').disabled = true;
+  el('btnReset').disabled = false;
+  enableSurcharges(false);
+}
+
+function addCharge(type) {
+  if (!S.running) return;
+  const rates = { erp:.5, toll:1.0, peak:3.0, midnight:5.0 };
+  S.surcharges[type]++;
+  S.fare += rates[type];
+  updateSurchargeUI();
+  updateFareDisplay();
+  flashFare();
+}
+
+function updateSurchargeUI() {
+  [['erp','erpCount','btnERP'],['toll','tollCount','btnToll'],
+   ['peak','peakCount','btnPeak'],['midnight','midnightCount','btnMN']]
+  .forEach(([k,cid,bid]) => {
+    el(cid).textContent = `×${S.surcharges[k]}`;
+    S.surcharges[k] > 0 ? el(bid).classList.add('active-charge') : el(bid).classList.remove('active-charge');
+  });
+}
+
+function enableSurcharges(on) {
+  ['btnERP','btnToll','btnPeak','btnMN'].forEach(id => el(id).disabled = !on);
+}
+
+function updateFareDisplay() { el('fareAmount').textContent = S.fare.toFixed(2); }
+
+function flashFare() {
+  const d = el('fareDisplay');
+  d.classList.remove('tick','charging'); void d.offsetWidth;
+  d.classList.add('tick','charging');
+  setTimeout(() => d.classList.remove('tick','charging'), 450);
+}
+
+function updateStatsUI() {
+  el('distVal').textContent = (S.distanceMetres/1000).toFixed(2);
+  el('timeVal').textContent = formatTime(S.elapsedSecs);
+  el('speedVal').textContent = S.speed;
+}
+
+function updateStationaryUI() {
+  if (!S.gpsOK || !S.running) return;
+  if (S.isMoving) {
+    el('statTimer').textContent = '▶';
+    el('statFill').style.width = '0%';
+    return;
+  }
+  const elapsed = S.stationarySecs % STAT_SECS;
+  const pct = Math.min(elapsed / STAT_SECS * 100, 100);
+  el('statTimer').textContent = formatTime(elapsed);
+  el('statFill').style.width = pct + '%';
+}
+
+function setGPSUI(dotCls, status, coords) {
+  el('gpsDot').className = 'gps-dot ' + dotCls;
+  el('gpsStatus').textContent = status;
+  el('gpsCoords').textContent = coords;
+}
+
+const el = id => document.getElementById(id);
+function formatTime(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+function fmtCoords(lat, lng) { return `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+function haversine(a, b) {
+  const R = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI/180;
+  const dLng = (b.lng - a.lng) * Math.PI/180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+window.addEventListener('load', () => {
+  setGPSUI('', 'GPS: Tap Enable to start', '');
+  requestGPS();
+});
+</script>
+</body>
+</html>
