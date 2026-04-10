@@ -2,488 +2,811 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>SG Taxi Meter</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --panel: #0f0f1a;
-    --panel2: #13131f;
-    --border: #1e1e35;
-    --green: #00ff88;
-    --green-dim: #00994d;
-    --amber: #ffaa00;
-    --amber-dim: #886600;
-    --red: #ff3355;
-    --red-dim: #881122;
-    --blue: #00aaff;
-    --blue-dim: #005588;
-    --text: #e0e0f0;
-    --text-dim: #555570;
-    --glow-green: 0 0 10px #00ff8888, 0 0 30px #00ff8833;
-    --glow-amber: 0 0 10px #ffaa0088, 0 0 30px #ffaa0033;
-    --glow-red:   0 0 10px #ff335588, 0 0 30px #ff335533;
-    --glow-blue:  0 0 10px #00aaff88, 0 0 30px #00aaff33;
+/* ═══════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════ */
+:root {
+  --bg:         #0a0a0f;
+  --panel:      #0f0f1a;
+  --panel2:     #13131f;
+  --border:     #1e1e35;
+  --green:      #00ff88;
+  --green-dim:  #00994d;
+  --amber:      #ffaa00;
+  --red:        #ff3355;
+  --red-dim:    #881122;
+  --blue:       #00aaff;
+  --blue-dim:   #005588;
+  --text:       #e0e0f0;
+  --text-dim:   #555570;
+  --glow-green: 0 0 10px #00ff8888, 0 0 30px #00ff8833;
+  --glow-amber: 0 0 10px #ffaa0088, 0 0 30px #ffaa0033;
+  --glow-red:   0 0 10px #ff335588, 0 0 30px #ff335533;
+  --glow-blue:  0 0 10px #00aaff88, 0 0 30px #00aaff33;
+  --gap:        10px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; min-height:100%;
+  background: var(--bg);
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text);
+  background-image:
+    radial-gradient(ellipse at 20% 50%, #00ff8808 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, #ffaa0008 0%, transparent 50%);
+}
+
+body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* scanlines */
+body::after {
+  content:''; position:fixed; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,#00000009 2px,#00000009 4px);
+  pointer-events:none; z-index:9999;
+}
+
+/* ═══════════════════════════════════════════
+   APP SHELL — PORTRAIT (default)
+═══════════════════════════════════════════ */
+.app {
+  width:100%;
+  max-width:480px;
+  padding:14px 14px env(safe-area-inset-bottom,12px) 14px;
+  display:flex;
+  flex-direction:column;
+  gap:var(--gap);
+}
+
+/* portrait: columns are transparent — items stack naturally */
+.col-left,
+.col-right { display:contents; }
+
+/* ═══════════════════════════════════════════
+   APP SHELL — LANDSCAPE
+   Triggers when height < 520px (phone rotated)
+═══════════════════════════════════════════ */
+@media (orientation:landscape) and (max-height:520px) {
+  body { align-items:stretch; }
+
+  .app {
+    max-width:100%;
+    flex-direction:row;
+    align-items:stretch;
+    padding:8px 12px env(safe-area-inset-bottom,4px) 12px;
+    gap:10px;
+    min-height:100vh;
   }
 
-  * { margin:0; padding:0; box-sizing:border-box; }
-
-  body {
-    background: var(--bg);
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow-x: hidden;
-    background-image:
-      radial-gradient(ellipse at 20% 50%, #00ff8808 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, #ffaa0008 0%, transparent 50%);
+  /* restore columns in landscape */
+  .col-left,
+  .col-right {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
   }
 
-  .container { width: 420px; padding: 16px; }
+  .col-left  { flex:0 0 240px; }
+  .col-right { flex:1; min-width:0; }
 
-  .header { text-align:center; margin-bottom:16px; }
-  .header-badge {
-    display: inline-block;
-    background: linear-gradient(135deg,#ffaa00,#ff6600);
-    color: #000; font-family:'Bebas Neue',sans-serif;
-    font-size:11px; letter-spacing:3px;
-    padding:3px 12px; border-radius:2px; margin-bottom:6px;
-  }
-  .header h1 {
-    font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900;
-    letter-spacing:4px; color:var(--text); text-shadow:0 0 20px #ffffff22;
-  }
+  /* compact in landscape */
+  .header           { display:none; }
+  .fare-display     { font-size:42px; }
+  .fare-currency    { font-size:20px; }
+  .stat-val         { font-size:13px; }
+}
 
-  .fare-card {
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:12px; padding:20px; margin-bottom:12px;
-    position:relative; overflow:hidden;
-  }
-  .fare-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:1px;
-    background:linear-gradient(90deg,transparent,var(--green),transparent); opacity:.5;
-  }
-  .fare-label {
-    font-size:10px; letter-spacing:3px; color:var(--text-dim);
-    text-transform:uppercase; margin-bottom:8px;
-    display:flex; justify-content:space-between; align-items:center;
-  }
-  .status-dot {
-    width:8px; height:8px; border-radius:50%;
-    background:var(--text-dim); transition:all .3s;
-  }
-  .status-dot.active     { background:var(--green); box-shadow:var(--glow-green); animation:pulse 1s infinite; }
-  .status-dot.idle       { background:var(--amber); box-shadow:var(--glow-amber); }
-  .status-dot.stationary { background:var(--red);   box-shadow:var(--glow-red);   animation:pulse .5s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* ─── HEADER ─── */
+.header { text-align:center; }
+.header-badge {
+  display:inline-block;
+  background:linear-gradient(135deg,#ffaa00,#ff6600);
+  color:#000; font-family:'Bebas Neue',sans-serif;
+  font-size:11px; letter-spacing:3px;
+  padding:3px 12px; border-radius:2px; margin-bottom:4px;
+}
+.header h1 {
+  font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900;
+  letter-spacing:4px; text-shadow:0 0 20px #ffffff22;
+}
 
-  .fare-display {
-    font-family:'Orbitron',sans-serif; font-size:62px; font-weight:900;
-    color:var(--green); text-shadow:var(--glow-green);
-    letter-spacing:2px; line-height:1; text-align:center;
-    transition:color .3s,text-shadow .3s;
-  }
-  .fare-display.charging { color:var(--amber); text-shadow:var(--glow-amber); }
-  .fare-currency { font-size:26px; vertical-align:super; margin-right:2px; }
+/* ─── FARE CARD ─── */
+.fare-card {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:12px; padding:14px 16px;
+  position:relative; overflow:hidden; flex-shrink:0;
+}
+.fare-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent); opacity:.5;
+}
+.fare-label {
+  font-size:9px; letter-spacing:3px; color:var(--text-dim);
+  text-transform:uppercase; margin-bottom:5px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.status-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--text-dim); transition:all .3s; flex-shrink:0;
+}
+.status-dot.active     { background:var(--green); box-shadow:var(--glow-green); animation:blink 1s infinite; }
+.status-dot.idle       { background:var(--amber); box-shadow:var(--glow-amber); }
+.status-dot.stationary { background:var(--red);   box-shadow:var(--glow-red);   animation:blink .5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
 
-  .stats-row {
-    display:grid; grid-template-columns:1fr 1fr 1fr;
-    gap:8px; margin-bottom:12px;
-  }
-  .stat-box {
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:8px; padding:10px 8px; text-align:center;
-  }
-  .stat-val {
-    font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700;
-    color:var(--blue); text-shadow:var(--glow-blue);
-  }
-  .stat-lbl { font-size:8px; letter-spacing:2px; color:var(--text-dim); margin-top:3px; text-transform:uppercase; }
+.fare-display {
+  font-family:'Orbitron',sans-serif; font-size:56px; font-weight:900;
+  color:var(--green); text-shadow:var(--glow-green);
+  letter-spacing:1px; line-height:1; text-align:center;
+  transition:color .3s,text-shadow .3s;
+}
+.fare-display.charging { color:var(--amber); text-shadow:var(--glow-amber); }
+.fare-currency { font-size:22px; vertical-align:super; margin-right:2px; }
 
-  .gps-bar {
-    display:flex; align-items:center; gap:8px;
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:8px; padding:9px 14px; margin-bottom:12px;
-  }
-  .gps-dot { width:8px; height:8px; border-radius:50%; background:var(--text-dim); flex-shrink:0; transition:all .3s; }
-  .gps-dot.on  { background:var(--green); box-shadow:var(--glow-green); animation:pulse 2s infinite; }
-  .gps-dot.sim { background:var(--amber); box-shadow:var(--glow-amber); }
-  .gps-dot.off { background:var(--red);   box-shadow:var(--glow-red); }
-  .gps-info { flex:1; }
-  .gps-status { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; }
-  .gps-coords { font-size:9px; color:var(--text-dim); margin-top:2px; font-size:8px; letter-spacing:1px; }
-  .gps-enable-btn {
-    background:transparent; border:1px solid var(--blue-dim); color:var(--blue);
-    font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1.5px;
-    padding:4px 10px; border-radius:4px; cursor:pointer; text-transform:uppercase;
-    transition:all .2s; white-space:nowrap;
-  }
-  .gps-enable-btn:hover { background:#00aaff11; border-color:var(--blue); }
+/* active surcharge tags below the fare */
+.surcharge-tags {
+  text-align:center; margin-top:6px; min-height:18px;
+  display:flex; justify-content:center; gap:4px; flex-wrap:wrap;
+}
+.surcharge-tags .tag {
+  background:var(--panel2); border:1px solid var(--amber);
+  border-radius:3px; padding:2px 7px;
+  color:var(--amber); font-size:8px; letter-spacing:1.5px;
+}
 
-  .stationary-bar {
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:8px; padding:10px 14px; margin-bottom:12px;
-    display:flex; align-items:center; gap:10px;
-  }
-  .stat-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; flex-shrink:0; }
-  .stat-progress { height:3px; background:var(--border); border-radius:2px; flex:1; overflow:hidden; }
-  .stat-progress-fill { height:100%; width:0%; border-radius:2px; background:var(--text-dim); transition:width 1s linear,background .3s; }
-  .stat-progress-fill.warn { background:var(--amber); }
-  .stat-progress-fill.crit { background:var(--red); }
-  .stat-timer {
-    font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700;
-    color:var(--text-dim); min-width:50px; text-align:right; transition:color .3s,text-shadow .3s;
-  }
-  .stat-timer.warn { color:var(--amber); text-shadow:var(--glow-amber); }
-  .stat-timer.crit { color:var(--red);   text-shadow:var(--glow-red); }
+/* ─── STATS ROW ─── */
+.stats-row {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+}
+.stat-box {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:9px 6px; text-align:center;
+}
+.stat-val {
+  font-family:'Orbitron',sans-serif; font-size:14px; font-weight:700;
+  color:var(--blue); text-shadow:var(--glow-blue);
+}
+.stat-lbl { font-size:8px; letter-spacing:2px; color:var(--text-dim); margin-top:2px; text-transform:uppercase; }
 
-  .section-title { font-size:9px; letter-spacing:3px; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px; padding-left:2px; }
-  .charges-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-  .charge-btn {
-    background:var(--panel2); border:1px solid var(--border);
-    border-radius:10px; padding:12px 10px; cursor:pointer;
-    transition:all .2s; text-align:left; position:relative; overflow:hidden;
-  }
-  .charge-btn:hover:not(:disabled) { border-color:#2e2e55; transform:translateY(-1px); }
-  .charge-btn:disabled { opacity:.35; cursor:not-allowed; }
-  .charge-btn.active-charge { border-color:var(--amber); background:#1a1408; box-shadow:inset 0 0 20px #ffaa0011; }
-  .cb-icon { font-size:18px; margin-bottom:4px; display:block; }
-  .cb-name { font-size:10px; letter-spacing:1.5px; color:var(--text); text-transform:uppercase; display:block; }
-  .cb-amt  { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700; color:var(--amber); margin-top:4px; display:block; }
-  .cb-count {
-    position:absolute; top:8px; right:10px;
-    font-family:'Orbitron',sans-serif; font-size:16px; font-weight:900;
-    color:var(--amber); text-shadow:var(--glow-amber);
-    opacity:0; transition:opacity .3s;
-  }
-  .charge-btn.active-charge .cb-count { opacity:1; }
+/* ─── GPS BAR ─── */
+.gps-bar {
+  display:flex; align-items:center; gap:8px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:8px 12px;
+}
+.gps-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--text-dim); flex-shrink:0; transition:all .3s;
+}
+.gps-dot.on  { background:var(--green); box-shadow:var(--glow-green); animation:blink 2s infinite; }
+.gps-dot.off { background:var(--red);   box-shadow:var(--glow-red); }
+.gps-info { flex:1; min-width:0; }
+.gps-status {
+  font-size:9px; letter-spacing:1.5px; color:var(--text-dim);
+  text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.gps-coords { font-size:8px; color:var(--text-dim); margin-top:1px; opacity:.65; }
+.gps-enable-btn {
+  background:transparent; border:1px solid var(--blue-dim); color:var(--blue);
+  font-family:'Share Tech Mono',monospace; font-size:8px; letter-spacing:1.5px;
+  padding:4px 8px; border-radius:4px; cursor:pointer; text-transform:uppercase;
+  transition:all .2s; white-space:nowrap; flex-shrink:0;
+}
+.gps-enable-btn:hover { background:#00aaff11; border-color:var(--blue); }
 
-  hr.div { border:none; border-top:1px solid var(--border); margin:14px 0; }
+/* ─── WAITING BAR ─── */
+.waiting-bar {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:8px 12px;
+  display:flex; align-items:center; gap:8px;
+}
+.wait-label { font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; flex-shrink:0; }
+.wait-track { height:3px; background:var(--border); border-radius:2px; flex:1; overflow:hidden; }
+.wait-fill  {
+  height:100%; width:0%; border-radius:2px; background:var(--text-dim);
+  transition:width .9s linear, background .3s;
+}
+.wait-fill.warn { background:var(--amber); }
+.wait-fill.crit { background:var(--red); }
+.wait-timer {
+  font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700;
+  color:var(--text-dim); min-width:36px; text-align:right; transition:color .3s,text-shadow .3s;
+}
+.wait-timer.warn { color:var(--amber); text-shadow:var(--glow-amber); }
+.wait-timer.crit { color:var(--red);   text-shadow:var(--glow-red); }
 
-  .controls-main { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
-  .controls-aux  { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+/* ─── FARE INFO CARD ─── */
+.fare-info {
+  background:var(--panel2); border:1px solid var(--border);
+  border-radius:8px; padding:10px 12px;
+}
+.fare-info-title {
+  font-size:8px; letter-spacing:2.5px; color:var(--text-dim);
+  text-transform:uppercase; margin-bottom:6px;
+}
+.fare-info-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:8px; letter-spacing:.5px; color:var(--text-dim);
+  padding:2px 0; border-bottom:1px solid #1a1a2a;
+}
+.fare-info-row:last-child { border-bottom:none; }
+.fare-info-row .fi-amt {
+  color:var(--amber); font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700;
+}
+.fare-info-row .fi-badge {
+  font-size:7px; letter-spacing:.5px; color:var(--text-dim);
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:2px; padding:1px 5px; margin-left:6px;
+}
 
-  .btn {
-    border:none; border-radius:10px; cursor:pointer;
-    font-family:'Orbitron',sans-serif; font-weight:700;
-    letter-spacing:2px; text-transform:uppercase;
-    transition:all .2s; position:relative; overflow:hidden;
-  }
-  .btn::after {
-    content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
-    background:linear-gradient(90deg,transparent,#ffffff11,transparent); transition:left .5s;
-  }
-  .btn:hover:not(:disabled)::after { left:100%; }
-  .btn:active:not(:disabled) { transform:scale(.97); }
-  .btn:disabled { opacity:.35; cursor:not-allowed; }
+/* ─── SECTION TITLE ─── */
+.section-title {
+  font-size:9px; letter-spacing:3px; color:var(--text-dim);
+  text-transform:uppercase; padding-left:2px;
+}
 
-  .btn-start {
-    background:linear-gradient(135deg,#004d2a,#006635); border:1px solid var(--green-dim);
-    color:var(--green); font-size:12px; padding:18px; box-shadow:0 0 20px #00ff8822;
-  }
-  .btn-start:hover:not(:disabled) { background:linear-gradient(135deg,#006635,#008844); box-shadow:0 0 30px #00ff8844; }
+/* ─── SURCHARGE BUTTONS ─── */
+.charges-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
-  .btn-finish {
-    background:linear-gradient(135deg,#4d0010,#661522); border:1px solid var(--red-dim);
-    color:var(--red); font-size:12px; padding:18px; box-shadow:0 0 20px #ff335522;
-  }
-  .btn-finish:hover:not(:disabled) { background:linear-gradient(135deg,#661522,#882030); box-shadow:0 0 30px #ff335544; }
+.charge-btn {
+  background:var(--panel2); border:1px solid var(--border);
+  border-radius:10px; padding:10px; cursor:pointer;
+  transition:all .2s; text-align:left; position:relative; overflow:hidden;
+}
+.charge-btn:hover:not(:disabled) { border-color:#2e2e55; transform:translateY(-1px); }
+.charge-btn:disabled { opacity:.28; cursor:not-allowed; }
+.charge-btn.active-charge {
+  border-color:var(--amber); background:#1a1408;
+  box-shadow:inset 0 0 20px #ffaa0011;
+}
+/* peak/midnight toggle: green when active */
+.charge-btn.toggle-charge {
+  border-color:var(--green); background:#0a1a10;
+  box-shadow:inset 0 0 20px #00ff8811;
+}
 
-  .btn-maps {
-    background:linear-gradient(135deg,#003a55,#004d70); border:1px solid var(--blue-dim);
-    color:var(--blue); font-size:10px; padding:12px 8px; box-shadow:0 0 15px #00aaff11;
-    display:flex; align-items:center; justify-content:center; gap:6px;
-  }
-  .btn-maps:hover:not(:disabled) { background:linear-gradient(135deg,#004d70,#006699); box-shadow:0 0 25px #00aaff33; }
+.cb-icon { font-size:16px; margin-bottom:3px; display:block; }
+.cb-name { font-size:9px; letter-spacing:1.5px; color:var(--text); text-transform:uppercase; display:block; }
+.cb-sub  { font-size:7px; letter-spacing:.5px;  color:var(--text-dim); display:block; margin-top:1px; }
+.cb-amt  { font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; color:var(--amber); margin-top:3px; display:block; }
+.cb-count {
+  position:absolute; top:8px; right:9px;
+  font-family:'Orbitron',sans-serif; font-size:13px; font-weight:900;
+  color:var(--amber); text-shadow:var(--glow-amber); opacity:0; transition:opacity .3s;
+}
+.charge-btn.active-charge .cb-count  { opacity:1; }
+.charge-btn.toggle-charge .cb-count  { opacity:1; color:var(--green); text-shadow:var(--glow-green); }
 
-  .btn-reset {
-    background:var(--panel2); border:1px solid var(--border);
-    color:var(--text-dim); font-size:10px; padding:12px 8px;
-  }
-  .btn-reset:hover:not(:disabled) { border-color:#2e2e55; color:var(--text); }
+/* ─── DIVIDER ─── */
+hr.div { border:none; border-top:1px solid var(--border); }
 
-  .modal-overlay {
-    position:fixed; top:0; left:0; right:0; bottom:0;
-    background:#000000cc; backdrop-filter:blur(4px);
-    display:flex; align-items:center; justify-content:center;
-    z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s;
-  }
-  .modal-overlay.visible { opacity:1; pointer-events:all; }
-  .receipt {
-    background:var(--panel); border:1px solid var(--green-dim); border-radius:16px;
-    padding:28px; width:340px; box-shadow:0 0 60px #00ff8822;
-    transform:translateY(20px); transition:transform .3s;
-  }
-  .modal-overlay.visible .receipt { transform:translateY(0); }
-  .receipt-title { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:4px; color:var(--green); text-shadow:var(--glow-green); text-align:center; margin-bottom:4px; }
-  .receipt-sub   { text-align:center; font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:20px; }
-  .receipt-line  { display:flex; justify-content:space-between; font-size:11px; padding:6px 0; border-bottom:1px solid var(--border); color:var(--text-dim); }
-  .receipt-line.total { border-bottom:none; margin-top:8px; font-size:14px; color:var(--text); }
-  .receipt-line .val { color:var(--text); font-family:'Orbitron',sans-serif; font-size:12px; }
-  .receipt-line.total .val { color:var(--green); text-shadow:var(--glow-green); font-size:20px; }
-  .receipt-close {
-    display:block; width:100%; margin-top:20px;
-    background:linear-gradient(135deg,#004d2a,#006635); border:1px solid var(--green-dim);
-    color:var(--green); font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px;
-    padding:12px; border-radius:8px; cursor:pointer; text-transform:uppercase; transition:all .2s;
-  }
-  .receipt-close:hover { background:linear-gradient(135deg,#006635,#008844); }
+/* ─── BUTTONS ─── */
+.controls-main { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.controls-aux  { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
-  @keyframes fareFlash { 0%{transform:scale(1)} 30%{transform:scale(1.05)} 100%{transform:scale(1)} }
-  .fare-display.tick { animation:fareFlash .3s ease-out; }
+.btn {
+  border:none; border-radius:10px; cursor:pointer;
+  font-family:'Orbitron',sans-serif; font-weight:700;
+  letter-spacing:2px; text-transform:uppercase;
+  transition:all .2s; position:relative; overflow:hidden;
+}
+.btn::after {
+  content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+  background:linear-gradient(90deg,transparent,#ffffff11,transparent); transition:left .5s;
+}
+.btn:hover:not(:disabled)::after { left:100%; }
+.btn:active:not(:disabled) { transform:scale(.97); }
+.btn:disabled { opacity:.3; cursor:not-allowed; }
 
-  body::after {
-    content:''; position:fixed; top:0; left:0; right:0; bottom:0;
-    background:repeating-linear-gradient(0deg,transparent,transparent 2px,#00000008 2px,#00000008 4px);
-    pointer-events:none; z-index:9999;
-  }
+.btn-start {
+  background:linear-gradient(135deg,#004d2a,#006635); border:1px solid var(--green-dim);
+  color:var(--green); font-size:11px; padding:16px 8px; box-shadow:0 0 20px #00ff8822;
+}
+.btn-start:hover:not(:disabled) { background:linear-gradient(135deg,#006635,#009944); box-shadow:0 0 30px #00ff8844; }
+
+.btn-finish {
+  background:linear-gradient(135deg,#4d0010,#661522); border:1px solid var(--red-dim);
+  color:var(--red); font-size:11px; padding:16px 8px; box-shadow:0 0 20px #ff335522;
+}
+.btn-finish:hover:not(:disabled) { background:linear-gradient(135deg,#661522,#882030); box-shadow:0 0 30px #ff335544; }
+
+.btn-maps {
+  background:linear-gradient(135deg,#003a55,#004d70); border:1px solid var(--blue-dim);
+  color:var(--blue); font-size:9px; padding:11px 6px; box-shadow:0 0 15px #00aaff11;
+  display:flex; align-items:center; justify-content:center; gap:5px;
+}
+.btn-maps:hover { background:linear-gradient(135deg,#004d70,#006699); box-shadow:0 0 25px #00aaff33; }
+
+.btn-reset {
+  background:var(--panel2); border:1px solid var(--border);
+  color:var(--text-dim); font-size:9px; padding:11px 6px;
+}
+.btn-reset:hover:not(:disabled) { border-color:#2e2e55; color:var(--text); }
+
+/* ─── RECEIPT MODAL ─── */
+.modal-overlay {
+  position:fixed; inset:0;
+  background:#000000cc; backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center;
+  z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s;
+  padding:16px;
+}
+.modal-overlay.visible { opacity:1; pointer-events:all; }
+
+.receipt {
+  background:var(--panel); border:1px solid var(--green-dim); border-radius:16px;
+  padding:22px; width:100%; max-width:360px; box-shadow:0 0 60px #00ff8822;
+  transform:translateY(20px); transition:transform .3s;
+  max-height:90dvh; overflow-y:auto;
+}
+.modal-overlay.visible .receipt { transform:translateY(0); }
+
+.receipt-title {
+  font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:4px;
+  color:var(--green); text-shadow:var(--glow-green); text-align:center; margin-bottom:2px;
+}
+.receipt-sub { text-align:center; font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:14px; }
+
+.receipt-section {
+  font-size:8px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase;
+  margin:10px 0 4px; padding-bottom:3px; border-bottom:1px solid var(--border);
+}
+.receipt-line {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; padding:4px 0; color:var(--text-dim);
+}
+.receipt-line .val { color:var(--text); font-family:'Orbitron',sans-serif; font-size:11px; }
+.receipt-line.nil  { opacity:.35; }
+.receipt-line.total-line {
+  margin-top:10px; padding-top:10px; border-top:1px solid var(--green-dim);
+  font-size:13px; color:var(--text);
+}
+.receipt-line.total-line .val {
+  color:var(--green); text-shadow:var(--glow-green); font-size:22px;
+}
+
+.receipt-close {
+  display:block; width:100%; margin-top:16px;
+  background:linear-gradient(135deg,#004d2a,#006635); border:1px solid var(--green-dim);
+  color:var(--green); font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px;
+  padding:11px; border-radius:8px; cursor:pointer; text-transform:uppercase; transition:all .2s;
+}
+.receipt-close:hover { background:linear-gradient(135deg,#006635,#009944); }
+
+/* ─── FARE FLASH ─── */
+@keyframes fareFlash { 0%{transform:scale(1)} 30%{transform:scale(1.06)} 100%{transform:scale(1)} }
+.fare-display.tick { animation:fareFlash .3s ease-out; }
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <div class="header-badge">🇸🇬 Singapore</div>
-    <h1>TAXIMETER</h1>
-  </div>
-  <div class="fare-card">
-    <div class="fare-label">
-      <span>METERED FARE</span>
-      <span id="statusDot" class="status-dot"></span>
-    </div>
-    <div class="fare-display" id="fareDisplay">
-      <span class="fare-currency">$</span><span id="fareAmount">0.00</span>
-    </div>
-  </div>
-  <div class="stats-row">
-    <div class="stat-box">
-      <div class="stat-val" id="distVal">0.00</div>
-      <div class="stat-lbl">KM</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" id="timeVal">00:00</div>
-      <div class="stat-lbl">ELAPSED</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val" id="speedVal">0</div>
-      <div class="stat-lbl">KM/H</div>
-    </div>
-  </div>
-  <div class="gps-bar">
-    <div class="gps-dot" id="gpsDot"></div>
-    <div class="gps-info">
-      <div class="gps-status" id="gpsStatus">GPS: Requesting…</div>
-      <div class="gps-coords" id="gpsCoords">—</div>
-    </div>
-    <button class="gps-enable-btn" id="gpsBtn" onclick="requestGPS()">Enable</button>
-  </div>
-  <div class="stationary-bar">
-    <div class="stat-label">🚦 Idle</div>
-    <div class="stat-progress">
-      <div class="stat-progress-fill" id="statFill"></div>
-    </div>
-    <div class="stat-timer" id="statTimer">--:--</div>
-  </div>
-  <div class="section-title">Surcharges & Tolls</div>
-  <div class="charges-grid">
-    <button class="charge-btn" id="btnERP"  onclick="addCharge('erp')"      disabled>
-      <span class="cb-icon">🛣️</span><span class="cb-name">ERP</span><span class="cb-amt">+$0.50</span>
-      <span class="cb-count" id="erpCount">×0</span>
-    </button>
-    <button class="charge-btn" id="btnToll" onclick="addCharge('toll')"     disabled>
-      <span class="cb-icon">🏗️</span><span class="cb-name">Other Toll</span><span class="cb-amt">+$1.00</span>
-      <span class="cb-count" id="tollCount">×0</span>
-    </button>
-    <button class="charge-btn" id="btnPeak" onclick="addCharge('peak')"     disabled>
-      <span class="cb-icon">⏰</span><span class="cb-name">Peak Hour</span><span class="cb-amt">+$3.00</span>
-      <span class="cb-count" id="peakCount">×0</span>
-    </button>
-    <button class="charge-btn" id="btnMN"   onclick="addCharge('midnight')" disabled>
-      <span class="cb-icon">🌙</span><span class="cb-name">Midnight</span><span class="cb-amt">+$5.00</span>
-      <span class="cb-count" id="midnightCount">×0</span>
-    </button>
-  </div>
-  <hr class="div">
-  <div class="controls-main">
-    <button class="btn btn-start"  id="btnStart"  onclick="startHire()">▶ START HIRE</button>
-    <button class="btn btn-finish" id="btnFinish" onclick="finishHire()" disabled>■ FINISH</button>
-  </div>
-  <div class="controls-aux">
-    <button class="btn btn-maps" onclick="openGoogleMaps()">
-      <span>🗺️</span><span>GOOGLE MAPS</span>
-    </button>
-    <button class="btn btn-reset" id="btnReset" onclick="resetMeter()" disabled>↺ RESET</button>
-  </div>
-</div>
+<div class="app">
 
+  <!-- ════ LEFT COLUMN ════ -->
+  <div class="col-left">
+
+    <div class="header">
+      <div class="header-badge">🇸🇬 Singapore</div>
+      <h1>TAXIMETER</h1>
+    </div>
+
+    <!-- Fare -->
+    <div class="fare-card">
+      <div class="fare-label">
+        <span>METERED FARE</span>
+        <span id="statusDot" class="status-dot"></span>
+      </div>
+      <div class="fare-display" id="fareDisplay">
+        <span class="fare-currency">$</span><span id="fareAmount">0.00</span>
+      </div>
+      <div class="surcharge-tags" id="surchargeTags"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-val" id="distVal">0.00</div>
+        <div class="stat-lbl">KM</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="timeVal">00:00</div>
+        <div class="stat-lbl">ELAPSED</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" id="speedVal">0</div>
+        <div class="stat-lbl">KM/H</div>
+      </div>
+    </div>
+
+    <!-- GPS -->
+    <div class="gps-bar">
+      <div class="gps-dot" id="gpsDot"></div>
+      <div class="gps-info">
+        <div class="gps-status" id="gpsStatus">GPS: Requesting…</div>
+        <div class="gps-coords" id="gpsCoords">—</div>
+      </div>
+      <button class="gps-enable-btn" id="gpsBtn" onclick="requestGPS()">Enable</button>
+    </div>
+
+    <!-- Waiting charge bar -->
+    <div class="waiting-bar">
+      <div class="wait-label">🚦 Wait</div>
+      <div class="wait-track"><div class="wait-fill" id="waitFill"></div></div>
+      <div class="wait-timer" id="waitTimer">--</div>
+    </div>
+
+  </div><!-- /col-left -->
+
+  <!-- ════ RIGHT COLUMN ════ -->
+  <div class="col-right">
+
+    <!-- Fare structure reference -->
+    <div class="fare-info">
+      <div class="fare-info-title">📋 Fare Structure</div>
+      <div class="fare-info-row">
+        <span>Flag-down (covers 1 km)</span>
+        <span class="fi-amt">$3.90</span>
+      </div>
+      <div class="fare-info-row">
+        <span>Per 400 m <span class="fi-badge">≤ 10 km</span></span>
+        <span class="fi-amt">$0.27</span>
+      </div>
+      <div class="fare-info-row">
+        <span>Per 350 m <span class="fi-badge">&gt; 10 km</span></span>
+        <span class="fi-amt">$0.27</span>
+      </div>
+      <div class="fare-info-row">
+        <span>Every 45 s waiting</span>
+        <span class="fi-amt">$0.27</span>
+      </div>
+    </div>
+
+    <!-- Surcharges -->
+    <div class="section-title">Surcharges &amp; Tolls</div>
+    <div class="charges-grid">
+
+      <!-- ERP — tap multiple times -->
+      <button class="charge-btn" id="btnERP" onclick="addCharge('erp')" disabled>
+        <span class="cb-icon">🛣️</span>
+        <span class="cb-name">ERP</span>
+        <span class="cb-sub">Tap per gantry</span>
+        <span class="cb-amt">+$0.50</span>
+        <span class="cb-count" id="erpCount">×0</span>
+      </button>
+
+      <!-- Other Toll — tap multiple times -->
+      <button class="charge-btn" id="btnToll" onclick="addCharge('toll')" disabled>
+        <span class="cb-icon">🏗️</span>
+        <span class="cb-name">Other Toll</span>
+        <span class="cb-sub">Tap per toll</span>
+        <span class="cb-amt">+$1.00</span>
+        <span class="cb-count" id="tollCount">×0</span>
+      </button>
+
+      <!-- Peak Hour — toggle, 25% of metered -->
+      <button class="charge-btn" id="btnPeak" onclick="toggleSurcharge('peak')" disabled>
+        <span class="cb-icon">⏰</span>
+        <span class="cb-name">Peak Hour</span>
+        <span class="cb-sub">Tap to toggle</span>
+        <span class="cb-amt">+25% fare</span>
+        <span class="cb-count" id="peakBadge"></span>
+      </button>
+
+      <!-- Midnight — toggle, 50% of metered -->
+      <button class="charge-btn" id="btnMN" onclick="toggleSurcharge('midnight')" disabled>
+        <span class="cb-icon">🌙</span>
+        <span class="cb-name">Midnight</span>
+        <span class="cb-sub">Tap to toggle</span>
+        <span class="cb-amt">+50% fare</span>
+        <span class="cb-count" id="mnBadge"></span>
+      </button>
+
+    </div>
+
+    <hr class="div">
+
+    <!-- Controls -->
+    <div class="controls-main">
+      <button class="btn btn-start"  id="btnStart"  onclick="startHire()">▶ START</button>
+      <button class="btn btn-finish" id="btnFinish" onclick="finishHire()" disabled>■ FINISH</button>
+    </div>
+    <div class="controls-aux">
+      <button class="btn btn-maps"  onclick="openGoogleMaps()">🗺️ MAPS</button>
+      <button class="btn btn-reset" id="btnReset" onclick="resetMeter()" disabled>↺ RESET</button>
+    </div>
+
+  </div><!-- /col-right -->
+
+</div><!-- /app -->
+
+<!-- ════ RECEIPT MODAL ════ -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="receipt">
     <div class="receipt-title">RECEIPT</div>
     <div class="receipt-sub">THANK YOU FOR RIDING</div>
-    <div class="receipt-line"><span>Base Fare</span>          <span class="val" id="rcBase">$0.00</span></div>
-    <div class="receipt-line"><span>Distance Travelled</span> <span class="val" id="rcDist">0.00 km</span></div>
-    <div class="receipt-line"><span>Distance Charges</span>   <span class="val" id="rcDistCharge">$0.00</span></div>
-    <div class="receipt-line"><span>Stationary Charges</span> <span class="val" id="rcStat">$0.00</span></div>
-    <div class="receipt-line"><span>ERP</span>                <span class="val" id="rcERP">$0.00</span></div>
-    <div class="receipt-line"><span>Other Tolls</span>        <span class="val" id="rcToll">$0.00</span></div>
-    <div class="receipt-line"><span>Surcharges</span>         <span class="val" id="rcSurcharge">$0.00</span></div>
-    <div class="receipt-line"><span>Duration</span>           <span class="val" id="rcTime">0:00</span></div>
-    <div class="receipt-line total"><span>TOTAL</span>        <span class="val" id="rcTotal">$0.00</span></div>
+
+    <div class="receipt-section">Base</div>
+    <div class="receipt-line">
+      <span>Flag-down (1 km incl.)</span>
+      <span class="val" id="rcBase">$3.90</span>
+    </div>
+
+    <div class="receipt-section">Distance &amp; Waiting</div>
+    <div class="receipt-line">
+      <span>Distance travelled</span>
+      <span class="val" id="rcDist">0.00 km</span>
+    </div>
+    <div class="receipt-line">
+      <span>Distance charges</span>
+      <span class="val" id="rcDistCharge">$0.00</span>
+    </div>
+    <div class="receipt-line">
+      <span>Waiting charges</span>
+      <span class="val" id="rcWait">$0.00</span>
+    </div>
+
+    <div class="receipt-section">Tolls</div>
+    <div class="receipt-line" id="rcERPRow">
+      <span>ERP</span>
+      <span class="val" id="rcERP">—</span>
+    </div>
+    <div class="receipt-line" id="rcTollRow">
+      <span>Other Tolls</span>
+      <span class="val" id="rcToll">—</span>
+    </div>
+
+    <div class="receipt-section">Surcharges</div>
+    <div class="receipt-line" id="rcPeakRow">
+      <span>Peak Hour (25% of metered)</span>
+      <span class="val" id="rcPeak">—</span>
+    </div>
+    <div class="receipt-line" id="rcMNRow">
+      <span>Midnight (50% of metered)</span>
+      <span class="val" id="rcMN">—</span>
+    </div>
+
+    <div class="receipt-section">Trip</div>
+    <div class="receipt-line">
+      <span>Duration</span>
+      <span class="val" id="rcTime">0:00</span>
+    </div>
+
+    <div class="receipt-line total-line">
+      <span>TOTAL</span>
+      <span class="val" id="rcTotal">$0.00</span>
+    </div>
+
     <button class="receipt-close" onclick="closeReceipt()">NEW TRIP</button>
   </div>
 </div>
 
 <script>
-const BASE_FARE      = 5.00;
-const PER_300M       = 0.33;
-const TICK_METRES    = 300;
-const STAT_SECS      = 180;
-const MOVE_THRESHOLD = 2;
+// ═══════════════════════════════════════════════════
+// FARE CONSTANTS
+// ═══════════════════════════════════════════════════
+const FLAG_DOWN      = 3.90;   // base flag-down (covers first 1 km)
+const UNIT           = 0.27;   // $ per distance/time tick
+const DIST_SHORT     = 400;    // metres per tick  ≤ 10 km
+const DIST_LONG      = 350;    // metres per tick  > 10 km
+const DIST_THRESHOLD = 10000;  // 10 km in metres
+const WAIT_SECS      = 45;     // seconds of waiting per $0.27 tick
+const MOVE_KMH       = 2;      // below this speed = stationary
 
+const ERP_RATE       = 0.50;
+const TOLL_RATE      = 1.00;
+const PEAK_PCT       = 0.25;   // 25% of metered subtotal
+const MIDNIGHT_PCT   = 0.50;   // 50% of metered subtotal
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
 const S = {
-  running: false,
-  fare: 0, distanceFare: 0, stationaryFare: 0,
-  surcharges: { erp:0, toll:0, peak:0, midnight:0 },
-  distanceMetres: 0, distanceBuffer: 0,
-  elapsedSecs: 0,
-  stationarySecs: 0,
-  isMoving: false, speed: 0,
-  gpsOK: false,
-  gpsWatch: null,
-  lastPos: null,
-  currentLat: null, currentLng: null,
+  running:        false,
+  baseFare:       0,
+  distFare:       0,
+  waitFare:       0,
+  erpFare:        0,
+  tollFare:       0,
+  peakFare:       0,
+  midnightFare:   0,
+
+  erpCount:       0,
+  tollCount:      0,
+  peakOn:         false,
+  midnightOn:     false,
+
+  distMetres:     0,     // total distance this trip
+  distBuffer:     0,     // metres toward next tick
+
+  elapsedSecs:    0,
+  waitSecs:       0,     // seconds stationary this cycle (resets after each charge)
+  waitTotal:      0,     // total wait seconds (for receipt)
+
+  isMoving:       false,
+  speed:          0,
+
+  gpsOK:          false,
+  gpsWatch:       null,
+  lastPos:        null,
+  currentLat:     null,
+  currentLng:     null,
 };
 
 let mainInterval = null;
 
+// ═══════════════════════════════════════════════════
+// FARE CALCULATION
+// ═══════════════════════════════════════════════════
+function meteredSubtotal() {
+  // metered = base + distance + waiting (before % surcharges)
+  return S.baseFare + S.distFare + S.waitFare;
+}
+
+function computeTotal() {
+  const metered    = meteredSubtotal();
+  S.peakFare       = S.peakOn     ? metered * PEAK_PCT     : 0;
+  S.midnightFare   = S.midnightOn ? metered * MIDNIGHT_PCT : 0;
+  return metered + S.erpFare + S.tollFare + S.peakFare + S.midnightFare;
+}
+
+function addDistanceMetres(m) {
+  if (m <= 0) return;
+  S.distMetres += m;
+  S.distBuffer += m;
+
+  let ticked = false;
+  while (S.distBuffer > 0) {
+    // Use short tick (400m) while total distance ≤ 10 km, long tick (350m) after
+    const tick = S.distMetres <= DIST_THRESHOLD ? DIST_SHORT : DIST_LONG;
+    if (S.distBuffer >= tick) {
+      S.distBuffer -= tick;
+      S.distFare   += UNIT;
+      ticked = true;
+    } else break;
+  }
+  if (ticked) flashFare();
+}
+
+// ═══════════════════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════════════════
 function requestGPS() {
   if (!navigator.geolocation) {
     setGPSUI('off', 'GPS: Not supported', '');
     return;
   }
   el('gpsStatus').textContent = 'GPS: Acquiring…';
-  navigator.geolocation.getCurrentPosition(onGPSSuccess, onGPSError, {
-    enableHighAccuracy: true, timeout: 10000, maximumAge: 0
-  });
+  navigator.geolocation.getCurrentPosition(onGPSSuccess, onGPSError,
+    { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
 }
 
 function startGPSWatch() {
   if (S.gpsWatch) return;
-  S.gpsWatch = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError, {
-    enableHighAccuracy: true, maximumAge: 1500, timeout: 10000
-  });
+  S.gpsWatch = navigator.geolocation.watchPosition(onGPSUpdate, onGPSError,
+    { enableHighAccuracy:true, maximumAge:1500, timeout:12000 });
 }
 
 function onGPSSuccess(pos) {
-  S.gpsOK = true;
+  S.gpsOK      = true;
   S.currentLat = pos.coords.latitude;
   S.currentLng = pos.coords.longitude;
-  S.lastPos = { lat: S.currentLat, lng: S.currentLng, t: Date.now() };
+  S.lastPos    = { lat:S.currentLat, lng:S.currentLng, t:Date.now() };
   setGPSUI('on', 'GPS: Active', fmtCoords(S.currentLat, S.currentLng));
   el('gpsBtn').style.display = 'none';
   startGPSWatch();
 }
 
 function onGPSError(err) {
-  const msgs = { 1:'Permission denied', 2:'Position unavailable', 3:'Timeout' };
-  setGPSUI('off', 'GPS: ' + (msgs[err.code] || 'Error'), 'Needs HTTPS to work');
+  const msgs = { 1:'Permission denied', 2:'Unavailable', 3:'Timeout' };
+  setGPSUI('off', 'GPS: ' + (msgs[err.code] || 'Error'), 'Waiting charges paused');
 }
 
 function onGPSUpdate(pos) {
-  const now   = Date.now();
-  const lat   = pos.coords.latitude;
-  const lng   = pos.coords.longitude;
-  const acc   = pos.coords.accuracy;
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  const acc = pos.coords.accuracy;
+  const now = Date.now();
 
-  if (acc > 50 && !S.running) return;
+  // Skip very inaccurate fixes when not yet running
+  if (acc > 60 && !S.running) return;
 
   S.currentLat = lat;
   S.currentLng = lng;
 
-  let speedKmh = 0;
+  // Speed: device-reported m/s preferred, else computed from delta
+  let kmh = 0;
   if (pos.coords.speed != null && pos.coords.speed >= 0) {
-    speedKmh = pos.coords.speed * 3.6;
+    kmh = pos.coords.speed * 3.6;
   } else if (S.lastPos) {
-    const d = haversine(S.lastPos, { lat, lng });
+    const d  = haversine(S.lastPos, { lat, lng });
     const dt = (now - S.lastPos.t) / 1000;
-    speedKmh = dt > 0 ? (d / dt) * 3.6 : 0;
+    kmh = dt > 0 ? (d / dt) * 3.6 : 0;
   }
 
-  S.speed    = Math.round(speedKmh);
-  S.isMoving = speedKmh > MOVE_THRESHOLD;
+  S.speed    = Math.round(kmh);
+  S.isMoving = kmh > MOVE_KMH;
 
+  // Accumulate distance while ride is running
   if (S.running && S.lastPos) {
     const d = haversine(S.lastPos, { lat, lng });
-    if (d < 200) addDistance(d);
+    if (d < 200) addDistanceMetres(d);  // ignore GPS jitter jumps >200 m
   }
 
   S.lastPos = { lat, lng, t: now };
-  setGPSUI('on', `GPS: ${S.isMoving ? '▶ Moving' : '◼ Stopped'} (${S.speed} km/h)`,
-           fmtCoords(lat, lng));
+  setGPSUI('on',
+    `GPS: ${S.isMoving ? '▶ Moving' : '◼ Stopped'} · ${S.speed} km/h`,
+    fmtCoords(lat, lng));
 }
 
-function openGoogleMaps() {
-  let url;
-  if (S.currentLat != null && S.currentLng != null) {
-    // FIXED: Real Google Maps Navigation URL structure
-    url = `https://www.google.com/maps/dir/?api=1&origin=${S.currentLat},${S.currentLng}&travelmode=driving`;
-  } else {
-    url = 'https://www.google.com/maps';
-  }
-  window.open(url, '_blank');
-}
-
+// ═══════════════════════════════════════════════════
+// METER
+// ═══════════════════════════════════════════════════
 function startHire() {
   if (S.running) return;
-  S.running = true;
-  S.fare = BASE_FARE;
-  resetStats();
+
+  S.running      = true;
+  S.baseFare     = FLAG_DOWN;
+  S.distFare     = 0;
+  S.waitFare     = 0;
+  S.erpFare      = 0;
+  S.tollFare     = 0;
+  S.peakFare     = 0;
+  S.midnightFare = 0;
+  S.erpCount     = 0;
+  S.tollCount    = 0;
+  S.distMetres   = 0;
+  S.distBuffer   = 0;
+  S.elapsedSecs  = 0;
+  S.waitSecs     = 0;
+  S.waitTotal    = 0;
+  S.isMoving     = false;
+  S.speed        = 0;
+  // peakOn / midnightOn kept as-set by driver before start
+
   updateFareDisplay();
   updateSurchargeUI();
-  el('statusDot').className = 'status-dot active';
-  el('btnStart').disabled = true;
-  el('btnFinish').disabled = false;
-  el('btnReset').disabled = true;
-  enableSurcharges(true);
-  if (S.gpsOK) startGPSWatch();
-  mainInterval = setInterval(tick, 1000);
-}
 
-function resetStats() {
-  S.distanceFare = 0; S.stationaryFare = 0; S.distanceMetres = 0; S.distanceBuffer = 0;
-  S.elapsedSecs = 0; S.stationarySecs = 0; S.surcharges = { erp:0, toll:0, peak:0, midnight:0 };
+  el('statusDot').className = 'status-dot active';
+  el('btnStart').disabled   = true;
+  el('btnFinish').disabled  = false;
+  el('btnReset').disabled   = true;
+  enableSurcharges(true);
+
+  if (S.gpsOK) startGPSWatch();
+
+  mainInterval = setInterval(tick, 1000);
 }
 
 function tick() {
   if (!S.running) return;
   S.elapsedSecs++;
+
+  // Waiting charge: $0.27 per 45 s stationary (GPS required)
   if (S.gpsOK && !S.isMoving) {
-    S.stationarySecs++;
-    if (S.stationarySecs > 0 && S.stationarySecs % STAT_SECS === 0) {
-      S.stationaryFare += PER_300M;
-      S.fare += PER_300M;
+    S.waitSecs++;
+    S.waitTotal++;
+    if (S.waitSecs % WAIT_SECS === 0) {
+      S.waitFare += UNIT;
+      S.waitSecs  = 0;   // reset cycle counter after each charge
       flashFare();
     }
-  } else {
-    S.stationarySecs = 0;
+  } else if (S.isMoving) {
+    S.waitSecs = 0;      // reset cycle when moving again
   }
-  updateStationaryUI();
+
+  updateWaitUI();
   updateStatsUI();
   updateFareDisplay();
-}
-
-function addDistance(metres) {
-  S.distanceMetres += metres;
-  S.distanceBuffer += metres;
-  while (S.distanceBuffer >= TICK_METRES) {
-    S.distanceBuffer -= TICK_METRES;
-    S.distanceFare += PER_300M;
-    S.fare += PER_300M;
-    flashFare();
-  }
 }
 
 function finishHire() {
@@ -496,15 +819,52 @@ function finishHire() {
 }
 
 function showReceipt() {
-  el('rcBase').textContent = `$${BASE_FARE.toFixed(2)}`;
-  el('rcDist').textContent = `${(S.distanceMetres/1000).toFixed(2)} km`;
-  el('rcDistCharge').textContent = `$${S.distanceFare.toFixed(2)}`;
-  el('rcStat').textContent = `$${S.stationaryFare.toFixed(2)}`;
-  el('rcERP').textContent = `$${(S.surcharges.erp * 0.5).toFixed(2)}`;
-  el('rcToll').textContent = `$${(S.surcharges.toll * 1.0).toFixed(2)}`;
-  el('rcSurcharge').textContent = `$${((S.surcharges.peak*3)+(S.surcharges.midnight*5)).toFixed(2)}`;
-  el('rcTime').textContent = formatTime(S.elapsedSecs);
-  el('rcTotal').textContent = `$${S.fare.toFixed(2)}`;
+  const total   = computeTotal();
+  const metered = meteredSubtotal();
+
+  el('rcBase').textContent       = `$${S.baseFare.toFixed(2)}`;
+  el('rcDist').textContent       = `${(S.distMetres/1000).toFixed(2)} km`;
+  el('rcDistCharge').textContent = `$${S.distFare.toFixed(2)}`;
+  el('rcWait').textContent       = `$${S.waitFare.toFixed(2)}`;
+
+  // ERP
+  if (S.erpCount > 0) {
+    el('rcERP').textContent = `$${S.erpFare.toFixed(2)} (×${S.erpCount})`;
+    el('rcERPRow').classList.remove('nil');
+  } else {
+    el('rcERP').textContent = '—';
+    el('rcERPRow').classList.add('nil');
+  }
+
+  // Toll
+  if (S.tollCount > 0) {
+    el('rcToll').textContent = `$${S.tollFare.toFixed(2)} (×${S.tollCount})`;
+    el('rcTollRow').classList.remove('nil');
+  } else {
+    el('rcToll').textContent = '—';
+    el('rcTollRow').classList.add('nil');
+  }
+
+  // Peak
+  if (S.peakOn) {
+    el('rcPeak').textContent = `$${S.peakFare.toFixed(2)}`;
+    el('rcPeakRow').classList.remove('nil');
+  } else {
+    el('rcPeak').textContent = '—';
+    el('rcPeakRow').classList.add('nil');
+  }
+
+  // Midnight
+  if (S.midnightOn) {
+    el('rcMN').textContent = `$${S.midnightFare.toFixed(2)}`;
+    el('rcMNRow').classList.remove('nil');
+  } else {
+    el('rcMN').textContent = '—';
+    el('rcMNRow').classList.add('nil');
+  }
+
+  el('rcTime').textContent  = formatTime(S.elapsedSecs);
+  el('rcTotal').textContent = `$${total.toFixed(2)}`;
   el('modalOverlay').classList.add('visible');
 }
 
@@ -514,43 +874,102 @@ function closeReceipt() {
 }
 
 function resetMeter() {
-  S.running = false; clearInterval(mainInterval);
-  el('fareAmount').textContent = '0.00';
-  el('statusDot').className = 'status-dot';
-  el('distVal').textContent = '0.00';
-  el('timeVal').textContent = '00:00';
-  el('speedVal').textContent = '0';
+  S.running       = false;
+  S.baseFare      = 0; S.distFare  = 0; S.waitFare     = 0;
+  S.erpFare       = 0; S.tollFare  = 0; S.peakFare     = 0; S.midnightFare = 0;
+  S.erpCount      = 0; S.tollCount = 0;
+  S.peakOn        = false; S.midnightOn = false;
+  S.distMetres    = 0; S.distBuffer = 0;
+  S.elapsedSecs   = 0; S.waitSecs  = 0; S.waitTotal = 0;
+  S.speed         = 0; S.isMoving  = false;
+
+  clearInterval(mainInterval);
+
+  el('fareAmount').textContent  = '0.00';
+  el('fareDisplay').className   = 'fare-display';
+  el('statusDot').className     = 'status-dot';
+  el('distVal').textContent     = '0.00';
+  el('timeVal').textContent     = '00:00';
+  el('speedVal').textContent    = '0';
+  el('waitTimer').textContent   = '--';
+  el('waitTimer').className     = 'wait-timer';
+  el('waitFill').style.width    = '0%';
+  el('waitFill').className      = 'wait-fill';
+  el('surchargeTags').innerHTML = '';
+
   updateSurchargeUI();
-  el('btnStart').disabled = false;
+  el('btnStart').disabled  = false;
   el('btnFinish').disabled = true;
-  el('btnReset').disabled = false;
+  el('btnReset').disabled  = false;
   enableSurcharges(false);
 }
 
+// ═══════════════════════════════════════════════════
+// SURCHARGES
+// ═══════════════════════════════════════════════════
 function addCharge(type) {
   if (!S.running) return;
-  const rates = { erp:.5, toll:1.0, peak:3.0, midnight:5.0 };
-  S.surcharges[type]++;
-  S.fare += rates[type];
+  if (type === 'erp') {
+    S.erpCount++;
+    S.erpFare += ERP_RATE;
+  } else {
+    S.tollCount++;
+    S.tollFare += TOLL_RATE;
+  }
   updateSurchargeUI();
   updateFareDisplay();
   flashFare();
 }
 
+function toggleSurcharge(type) {
+  if (!S.running) return;
+  if (type === 'peak') {
+    S.peakOn = !S.peakOn;
+    if (S.peakOn) S.midnightOn = false;   // mutually exclusive
+  } else {
+    S.midnightOn = !S.midnightOn;
+    if (S.midnightOn) S.peakOn = false;
+  }
+  updateSurchargeUI();
+  updateFareDisplay();
+}
+
 function updateSurchargeUI() {
-  [['erp','erpCount','btnERP'],['toll','tollCount','btnToll'],
-   ['peak','peakCount','btnPeak'],['midnight','midnightCount','btnMN']]
-  .forEach(([k,cid,bid]) => {
-    el(cid).textContent = `×${S.surcharges[k]}`;
-    S.surcharges[k] > 0 ? el(bid).classList.add('active-charge') : el(bid).classList.remove('active-charge');
-  });
+  // ERP
+  el('erpCount').textContent = S.erpCount > 0 ? `×${S.erpCount}` : '';
+  el('btnERP').classList.toggle('active-charge', S.erpCount > 0);
+
+  // Toll
+  el('tollCount').textContent = S.tollCount > 0 ? `×${S.tollCount}` : '';
+  el('btnToll').classList.toggle('active-charge', S.tollCount > 0);
+
+  // Peak (toggle — green when on)
+  el('peakBadge').textContent = S.peakOn ? 'ON' : '';
+  el('btnPeak').classList.toggle('toggle-charge', S.peakOn);
+  el('btnPeak').classList.toggle('active-charge', false);
+
+  // Midnight (toggle — green when on)
+  el('mnBadge').textContent = S.midnightOn ? 'ON' : '';
+  el('btnMN').classList.toggle('toggle-charge', S.midnightOn);
+  el('btnMN').classList.toggle('active-charge', false);
+
+  // Tags beneath fare
+  const tags = [];
+  if (S.peakOn)     tags.push('<span class="tag">PEAK +25%</span>');
+  if (S.midnightOn) tags.push('<span class="tag">MIDNIGHT +50%</span>');
+  el('surchargeTags').innerHTML = tags.join('');
 }
 
 function enableSurcharges(on) {
   ['btnERP','btnToll','btnPeak','btnMN'].forEach(id => el(id).disabled = !on);
 }
 
-function updateFareDisplay() { el('fareAmount').textContent = S.fare.toFixed(2); }
+// ═══════════════════════════════════════════════════
+// UI UPDATES
+// ═══════════════════════════════════════════════════
+function updateFareDisplay() {
+  el('fareAmount').textContent = computeTotal().toFixed(2);
+}
 
 function flashFare() {
   const d = el('fareDisplay');
@@ -560,43 +979,81 @@ function flashFare() {
 }
 
 function updateStatsUI() {
-  el('distVal').textContent = (S.distanceMetres/1000).toFixed(2);
-  el('timeVal').textContent = formatTime(S.elapsedSecs);
+  el('distVal').textContent  = (S.distMetres/1000).toFixed(2);
+  el('timeVal').textContent  = formatTime(S.elapsedSecs);
   el('speedVal').textContent = S.speed;
 }
 
-function updateStationaryUI() {
-  if (!S.gpsOK || !S.running) return;
-  if (S.isMoving) {
-    el('statTimer').textContent = '▶';
-    el('statFill').style.width = '0%';
+function updateWaitUI() {
+  if (!S.gpsOK || !S.running) {
+    el('waitTimer').textContent = '--';
+    el('waitTimer').className   = 'wait-timer';
+    el('waitFill').style.width  = '0%';
+    el('waitFill').className    = 'wait-fill';
     return;
   }
-  const elapsed = S.stationarySecs % STAT_SECS;
-  const pct = Math.min(elapsed / STAT_SECS * 100, 100);
-  el('statTimer').textContent = formatTime(elapsed);
-  el('statFill').style.width = pct + '%';
+  if (S.isMoving) {
+    el('waitTimer').textContent = '▶';
+    el('waitTimer').className   = 'wait-timer';
+    el('waitFill').style.width  = '0%';
+    el('waitFill').className    = 'wait-fill';
+    if (S.running) el('statusDot').className = 'status-dot active';
+    return;
+  }
+
+  // waitSecs resets to 0 after each 45s charge, so this shows progress in current cycle
+  const pct  = Math.min(S.waitSecs / WAIT_SECS * 100, 100);
+  const warn = pct >= 55;
+  const crit = pct >= 85;
+
+  el('waitTimer').textContent = `${S.waitSecs}s`;
+  el('waitFill').style.width  = pct + '%';
+  el('waitTimer').className   = 'wait-timer' + (crit ? ' crit' : warn ? ' warn' : '');
+  el('waitFill').className    = 'wait-fill'  + (crit ? ' crit' : warn ? ' warn' : '');
+  el('statusDot').className   = 'status-dot ' + (crit ? 'stationary' : 'active');
 }
 
 function setGPSUI(dotCls, status, coords) {
-  el('gpsDot').className = 'gps-dot ' + dotCls;
+  el('gpsDot').className      = 'gps-dot ' + dotCls;
   el('gpsStatus').textContent = status;
   el('gpsCoords').textContent = coords;
 }
 
+// ═══════════════════════════════════════════════════
+// GOOGLE MAPS BUTTON
+// ═══════════════════════════════════════════════════
+function openGoogleMaps() {
+  const url = S.currentLat != null
+    ? `https://www.google.com/maps/dir/?api=1&origin=${S.currentLat},${S.currentLng}&travelmode=driving`
+    : 'https://www.google.com/maps';
+  window.open(url, '_blank');
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
 const el = id => document.getElementById(id);
-function formatTime(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
-function fmtCoords(lat, lng) { return `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+
+function formatTime(s) {
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+
+function fmtCoords(lat, lng) {
+  return `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`;
+}
+
 function haversine(a, b) {
-  const R = 6371000;
-  const dLat = (b.lat - a.lat) * Math.PI/180;
-  const dLng = (b.lng - a.lng) * Math.PI/180;
-  const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  const R    = 6371000;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const x    = Math.sin(dLat/2)**2
+              + Math.cos(a.lat*Math.PI/180) * Math.cos(b.lat*Math.PI/180) * Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
 }
 
+// Boot
 window.addEventListener('load', () => {
-  setGPSUI('', 'GPS: Tap Enable to start', '');
+  setGPSUI('', 'GPS: Tap Enable', '');
   requestGPS();
 });
 </script>
