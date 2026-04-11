@@ -425,7 +425,7 @@ hr.div { border:none; border-top:1px solid var(--border); }
         <div class="gps-status" id="gpsStatus">GPS: Requesting…</div>
         <div class="gps-coords"  id="gpsCoords">—</div>
       </div>
-      <button class="gps-btn" id="gpsBtn" onclick="requestGPS()">Enable</button>
+      <button class="gps-btn" id="gpsBtn" type="button">Enable</button>
     </div>
 
     <!-- Wait -->
@@ -453,7 +453,7 @@ hr.div { border:none; border-top:1px solid var(--border); }
     <div class="sec-title">Surcharges &amp; Tolls</div>
     <div class="charges-grid">
 
-      <button class="charge-btn" id="btnERP"  onclick="addERP()"          disabled>
+      <button class="charge-btn" id="btnERP"  type="button" disabled>
         <span class="cb-icon">🛣️</span>
         <span class="cb-name">ERP</span>
         <span class="cb-sub">Tap per gantry</span>
@@ -461,7 +461,7 @@ hr.div { border:none; border-top:1px solid var(--border); }
         <span class="cb-badge" id="erpBadge"></span>
       </button>
 
-      <button class="charge-btn" id="btnToll" onclick="openTollModal()"   disabled>
+      <button class="charge-btn" id="btnToll" type="button" disabled>
         <span class="cb-icon">🏗️</span>
         <span class="cb-name">Other Toll</span>
         <span class="cb-sub">Tap to enter amount</span>
@@ -469,7 +469,7 @@ hr.div { border:none; border-top:1px solid var(--border); }
         <span class="cb-badge" id="tollBadge"></span>
       </button>
 
-      <button class="charge-btn" id="btnPeak" onclick="togglePct('peak')" disabled>
+      <button class="charge-btn" id="btnPeak" type="button" disabled>
         <span class="cb-icon">⏰</span>
         <span class="cb-name">Peak Hour</span>
         <span class="cb-sub">Tap to toggle</span>
@@ -477,7 +477,7 @@ hr.div { border:none; border-top:1px solid var(--border); }
         <span class="cb-badge" id="peakBadge"></span>
       </button>
 
-      <button class="charge-btn" id="btnMN"   onclick="togglePct('mn')"   disabled>
+      <button class="charge-btn" id="btnMN"   type="button" disabled>
         <span class="cb-icon">🌙</span>
         <span class="cb-name">Midnight</span>
         <span class="cb-sub">Tap to toggle</span>
@@ -490,12 +490,12 @@ hr.div { border:none; border-top:1px solid var(--border); }
     <hr class="div">
 
     <div class="controls-main">
-      <button class="btn btn-start"  id="btnStart"  onclick="startHire()">▶ START</button>
-      <button class="btn btn-finish" id="btnFinish" onclick="finishHire()" disabled>■ FINISH</button>
+      <button class="btn btn-start"  id="btnStart"  type="button">▶ START</button>
+      <button class="btn btn-finish" id="btnFinish" type="button" disabled>■ FINISH</button>
     </div>
     <div class="controls-aux">
-      <button class="btn btn-maps"  onclick="openGoogleMaps()">🗺️ MAPS</button>
-      <button class="btn btn-reset" id="btnReset"  onclick="resetMeter()" disabled>↺ RESET</button>
+      <button class="btn btn-maps"  type="button" id="btnMaps">🗺️ MAPS</button>
+      <button class="btn btn-reset" id="btnReset"  type="button" disabled>↺ RESET</button>
     </div>
 
   </div><!-- /col-right -->
@@ -515,16 +515,16 @@ hr.div { border:none; border-top:1px solid var(--border); }
     </div>
 
     <div class="toll-presets">
-      <button class="toll-preset" onclick="setTollPreset(0.50)">$0.50</button>
-      <button class="toll-preset" onclick="setTollPreset(1.00)">$1.00</button>
-      <button class="toll-preset" onclick="setTollPreset(1.50)">$1.50</button>
-      <button class="toll-preset" onclick="setTollPreset(2.00)">$2.00</button>
-      <button class="toll-preset" onclick="setTollPreset(3.00)">$3.00</button>
+      <button class="toll-preset" type="button" data-amount="0.50">$0.50</button>
+      <button class="toll-preset" type="button" data-amount="1.00">$1.00</button>
+      <button class="toll-preset" type="button" data-amount="1.50">$1.50</button>
+      <button class="toll-preset" type="button" data-amount="2.00">$2.00</button>
+      <button class="toll-preset" type="button" data-amount="3.00">$3.00</button>
     </div>
 
     <div class="toll-actions">
-      <button class="toll-cancel"  onclick="closeTollModal()">Cancel</button>
-      <button class="toll-confirm" onclick="confirmToll()">+ Add</button>
+      <button class="toll-cancel"  type="button">Cancel</button>
+      <button class="toll-confirm" type="button">+ Add</button>
     </div>
   </div>
 </div>
@@ -555,7 +555,7 @@ hr.div { border:none; border-top:1px solid var(--border); }
     <div class="r-line"><span>Duration</span><span class="val" id="rcTime">0:00</span></div>
 
     <div class="r-total"><span>TOTAL</span><span class="val" id="rcTotal">$0.00</span></div>
-    <button class="r-close" onclick="closeReceipt()">NEW TRIP</button>
+    <button class="r-close" type="button">NEW TRIP</button>
   </div>
 </div>
 
@@ -593,7 +593,22 @@ const S = {
 let mainInterval = null;
 
 // ═══════════════════════════════════════════════
-// ORIENTATION — JS-driven, most reliable approach
+// HELPERS
+// ═══════════════════════════════════════════════
+const el = id => document.getElementById(id);
+
+function formatTime(s) {
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+function fmtCoords(lat,lng) { return `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`; }
+function haversine(a,b) {
+  const R=6371000, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+// ═══════════════════════════════════════════════
+// ORIENTATION — JS-driven
 // ═══════════════════════════════════════════════
 function applyOrientation() {
   const landscape = window.innerWidth > window.innerHeight;
@@ -601,7 +616,6 @@ function applyOrientation() {
 }
 window.addEventListener('resize',            applyOrientation);
 window.addEventListener('orientationchange', () => setTimeout(applyOrientation, 120));
-// Run immediately on load (see boot section)
 
 // ═══════════════════════════════════════════════
 // FARE CALCULATION
@@ -635,7 +649,10 @@ function addDistMetres(d) {
 // GPS
 // ═══════════════════════════════════════════════
 function requestGPS() {
-  if (!navigator.geolocation) { setGPSUI('off','GPS: Not supported',''); return; }
+  if (!navigator.geolocation) { 
+    setGPSUI('off','GPS: Not supported',''); 
+    return; 
+  }
   el('gpsStatus').textContent = 'GPS: Acquiring…';
   navigator.geolocation.getCurrentPosition(onGPSOK, onGPSErr,
     { enableHighAccuracy:true, timeout:12000, maximumAge:0 });
@@ -705,7 +722,6 @@ function startHire() {
   S.distMetres = S.distBuffer = 0;
   S.elapsedSecs= S.waitSecs = 0;
   S.isMoving   = false; S.speed = 0;
-  // peakOn / mnOn kept as pre-set
 
   updateFareDisplay(); updateSurchargeUI();
   el('statusDot').className = 'status-dot active';
@@ -743,7 +759,7 @@ function finishHire() {
 }
 
 function showReceipt() {
-  computeTotal(); // refresh peakFare / mnFare
+  computeTotal();
   el('rcBase').textContent       = `$${S.baseFare.toFixed(2)}`;
   el('rcDist').textContent       = `${(S.distMetres/1000).toFixed(2)} km`;
   el('rcDistCharge').textContent = `$${S.distFare.toFixed(2)}`;
@@ -806,7 +822,6 @@ function addERP() {
   updateSurchargeUI(); updateFareDisplay(); flashFare();
 }
 
-// ── TOLL MODAL ──
 function openTollModal() {
   if (!S.running) return;
   el('tollInput').value = '';
@@ -828,19 +843,13 @@ function confirmToll() {
     el('tollInput').focus();
     return;
   }
-  const amt = Math.round(raw * 100) / 100; // round to cents
+  const amt = Math.round(raw * 100) / 100;
   S.tollCount++;
   S.tollFare += amt;
-  // Update button label to show last added amount
   el('tollAmt').textContent = `+$${amt.toFixed(2)}`;
   closeTollModal();
   updateSurchargeUI(); updateFareDisplay(); flashFare();
 }
-
-// Close toll modal on backdrop click
-el('tollOverlay').addEventListener('click', e => { if (e.target === el('tollOverlay')) closeTollModal(); });
-// Confirm on Enter key
-el('tollInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmToll(); });
 
 function togglePct(type) {
   if (!S.running) return;
@@ -855,21 +864,16 @@ function togglePct(type) {
 }
 
 function updateSurchargeUI() {
-  // ERP
   el('erpBadge').textContent = S.erpCount > 0 ? `×${S.erpCount}` : '';
   el('btnERP').classList.toggle('active-charge', S.erpCount > 0);
-  // Toll
   el('tollBadge').textContent = S.tollCount > 0 ? `×${S.tollCount}` : '';
   el('btnToll').classList.toggle('active-charge', S.tollCount > 0);
-  // Peak
   el('peakBadge').textContent = S.peakOn ? 'ON' : '';
   el('btnPeak').classList.toggle('toggle-on',     S.peakOn);
   el('btnPeak').classList.toggle('active-charge', false);
-  // MN
   el('mnBadge').textContent = S.mnOn ? 'ON' : '';
   el('btnMN').classList.toggle('toggle-on',     S.mnOn);
   el('btnMN').classList.toggle('active-charge', false);
-  // Tags
   const tags = [];
   if (S.peakOn) tags.push('<span class="tag">PEAK +25%</span>');
   if (S.mnOn)   tags.push('<span class="tag">MIDNIGHT +50%</span>');
@@ -939,18 +943,50 @@ function openGoogleMaps() {
 }
 
 // ═══════════════════════════════════════════════
-// HELPERS
+// EVENT LISTENERS - ATTACHED ON DOM READY
 // ═══════════════════════════════════════════════
-const el = id => document.getElementById(id);
+function initializeEventListeners() {
+  // Main buttons
+  el('btnStart').addEventListener('click', startHire);
+  el('btnFinish').addEventListener('click', finishHire);
+  el('btnReset').addEventListener('click', resetMeter);
+  el('btnMaps').addEventListener('click', openGoogleMaps);
+  el('gpsBtn').addEventListener('click', requestGPS);
 
-function formatTime(s) {
-  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-}
-function fmtCoords(lat,lng) { return `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`; }
-function haversine(a,b) {
-  const R=6371000, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
-  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+  // Surcharge buttons
+  el('btnERP').addEventListener('click', addERP);
+  el('btnToll').addEventListener('click', openTollModal);
+  el('btnPeak').addEventListener('click', () => togglePct('peak'));
+  el('btnMN').addEventListener('click', () => togglePct('mn'));
+
+  // Toll modal
+  el('tollOverlay').addEventListener('click', (e) => {
+    if (e.target === el('tollOverlay')) closeTollModal();
+  });
+  el('tollInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmToll();
+  });
+  
+  // Toll presets
+  document.querySelectorAll('.toll-preset').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const amt = parseFloat(e.target.getAttribute('data-amount'));
+      setTollPreset(amt);
+    });
+  });
+  
+  // Toll confirm/cancel
+  document.querySelectorAll('.toll-cancel').forEach(btn => {
+    btn.addEventListener('click', closeTollModal);
+  });
+  document.querySelectorAll('.toll-confirm').forEach(btn => {
+    btn.addEventListener('click', confirmToll);
+  });
+
+  // Receipt modal
+  document.querySelectorAll('.r-close').forEach(btn => {
+    btn.addEventListener('click', closeReceipt);
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -958,6 +994,7 @@ function haversine(a,b) {
 // ═══════════════════════════════════════════════
 window.addEventListener('load', () => {
   applyOrientation();
+  initializeEventListeners();
   setGPSUI('','GPS: Tap Enable','');
   requestGPS();
 });
